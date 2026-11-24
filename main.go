@@ -66,12 +66,7 @@ func run(args []string, input io.Reader, output io.Writer) error {
 	for e := range seen {
 		edges = append(edges, e)
 	}
-	slices.SortFunc(edges, func(a, b edge) int {
-		if order := strings.Compare(a.From, b.From); order != 0 {
-			return order
-		}
-		return strings.Compare(a.To, b.To)
-	})
+	sortEdges(edges)
 	encoder := json.NewEncoder(output)
 	if *graphEdges {
 		return encoder.Encode(edges)
@@ -82,6 +77,15 @@ func run(args []string, input io.Reader, output io.Writer) error {
 		imports[e.From] = append(imports[e.From], e.To)
 	}
 	return encoder.Encode(imports)
+}
+
+func sortEdges(edges []edge) {
+	slices.SortFunc(edges, func(a, b edge) int {
+		if order := strings.Compare(a.From, b.From); order != 0 {
+			return order
+		}
+		return strings.Compare(a.To, b.To)
+	})
 }
 
 func readDocument(input io.Reader, fileName string) (document, error) {
@@ -112,7 +116,13 @@ func readDocument(input io.Reader, fileName string) (document, error) {
 }
 
 func main() {
-	if err := run(os.Args[1:], os.Stdin, os.Stdout); err != nil {
+	var err error
+	if len(os.Args) == 3 && os.Args[1] == "--project" {
+		err = runProject(os.Args[2], os.Stdin, os.Stdout)
+	} else {
+		err = run(os.Args[1:], os.Stdin, os.Stdout)
+	}
+	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
