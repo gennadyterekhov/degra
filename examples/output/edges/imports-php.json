@@ -1,0 +1,102 @@
+[
+    {
+        "from": "src/Analyzer/Analyzer.php",
+        "to": "src/Dto/AnalysisResult.php"
+    },
+    {
+        "from": "src/Analyzer/Analyzer.php",
+        "to": "src/Dto/Config.php"
+    },
+    {
+        "from": "src/Analyzer/Analyzer.php",
+        "to": "src/Project/Project.php"
+    },
+    {
+        "from": "src/Analyzer/Analyzer.php",
+        "to": "src/Syntax/NamespaceBlock.php"
+    },
+    {
+        "from": "src/Analyzer/Analyzer.php",
+        "to": "src/Syntax/SourceParser.php"
+    },
+    {
+        "from": "src/Analyzer/Analyzer.php",
+        "to": "src/Syntax/SymbolIndex.php"
+    },
+    {
+        "from": "src/Analyzer/App.php",
+        "to": "src/Config/ConfigService.php"
+    },
+    {
+        "from": "src/Analyzer/App.php",
+        "to": "src/Dto/AnalysisResult.php"
+    },
+    {
+        "from": "src/Analyzer/App.php",
+        "to": "src/Dto/Config.php"
+    },
+    {
+        "from": "src/Analyzer/ImportExtractor.php",
+        "to": "src/Syntax/NamespaceBlock.php"
+    },
+    {
+        "from": "src/Analyzer/ImportExtractor.php",
+        "to": "src/Syntax/SymbolIndex.php"
+    },
+    {
+        "from": "src/Analyzer/IncludeResolver.php",
+        "to": "src/Project/Project.php"
+    },
+    {
+        "from": "src/Analyzer/UseStmtChecker.php",
+        "to": "src/Dto/Config.php"
+    },
+    {
+        "from": "src/Config/ConfigService.php",
+        "to": "src/Dto/Config.php"
+    },
+    {
+        "from": "src/Config/ConfigService.php",
+        "to": "src/Project/Project.php"
+    },
+    {
+        "from": "src/import-layers.php",
+        "to": "src/Analyzer/App.php"
+    },
+    {
+        "from": "tests/Helpers/Testdata.php",
+        "to": "src/Project/Project.php"
+    },
+    {
+        "from": "tests/TestdataTest.php",
+        "to": "tests/Helpers/Testdata.php"
+    },
+    {
+        "from": "tests/Unit/Analyzer/AnalyzerTest.php",
+        "to": "src/Analyzer/Analyzer.php"
+    },
+    {
+        "from": "tests/Unit/Analyzer/AnalyzerTest.php",
+        "to": "src/Analyzer/App.php"
+    },
+    {
+        "from": "tests/Unit/Analyzer/AnalyzerTest.php",
+        "to": "src/Dto/Config.php"
+    },
+    {
+        "from": "tests/Unit/Analyzer/AnalyzerTest.php",
+        "to": "tests/Helpers/Testdata.php"
+    },
+    {
+        "from": "tests/Unit/Config/ConfigServiceTest.php",
+        "to": "src/Config/ConfigService.php"
+    },
+    {
+        "from": "tests/testdata/Unit/Analyzer/AnalyzerTest/HighUsesLow/High/High.php",
+        "to": "tests/testdata/Unit/Analyzer/AnalyzerTest/HighUsesLow/Low/Low.php"
+    },
+    {
+        "from": "tests/testdata/Unit/Analyzer/AnalyzerTest/LowUsesHigh/Low/Low.php",
+        "to": "tests/testdata/Unit/Analyzer/AnalyzerTest/LowUsesHigh/High/High.php"
+    }
+]

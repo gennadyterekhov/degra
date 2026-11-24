@@ -1,42 +1,24 @@
-[
-    {
-        "from": "bin/import-layers-js.js",
-        "to": "src/adapters/config.js"
-    },
-    {
-        "from": "bin/import-layers-js.js",
-        "to": "src/index.js"
-    },
-    {
-        "from": "src/adapters/dependencies.js",
-        "to": "src/adapters/project.js"
-    },
-    {
-        "from": "src/adapters/project.js",
-        "to": "src/adapters/config.js"
-    },
-    {
-        "from": "src/analysis/analyze.js",
-        "to": "src/analysis/layers.js"
-    },
-    {
-        "from": "src/index.js",
-        "to": "src/adapters/dependencies.js"
-    },
-    {
-        "from": "src/index.js",
-        "to": "src/adapters/project.js"
-    },
-    {
-        "from": "src/index.js",
-        "to": "src/adapters/source.js"
-    },
-    {
-        "from": "src/index.js",
-        "to": "src/analysis/analyze.js"
-    },
-    {
-        "from": "test/cli.test.js",
-        "to": "src/index.js"
-    }
-]
+{
+    "bin/import-layers-js.js": [
+        "src/adapters/config.js",
+        "src/index.js"
+    ],
+    "src/adapters/dependencies.js": [
+        "src/adapters/project.js"
+    ],
+    "src/adapters/project.js": [
+        "src/adapters/config.js"
+    ],
+    "src/analysis/analyze.js": [
+        "src/analysis/layers.js"
+    ],
+    "src/index.js": [
+        "src/adapters/dependencies.js",
+        "src/adapters/project.js",
+        "src/adapters/source.js",
+        "src/analysis/analyze.js"
+    ],
+    "test/cli.test.js": [
+        "src/index.js"
+    ]
+}

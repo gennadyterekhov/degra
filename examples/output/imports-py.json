@@ -1,62 +1,29 @@
-[
-    {
-        "from": "src/import_layers_py/__main__.py",
-        "to": "src/import_layers_py/analyzer/app.py"
-    },
-    {
-        "from": "src/import_layers_py/analyzer/analyzer.py",
-        "to": "src/import_layers_py/analyzer/import_checker.py"
-    },
-    {
-        "from": "src/import_layers_py/analyzer/analyzer.py",
-        "to": "src/import_layers_py/dto/analysis_result.py"
-    },
-    {
-        "from": "src/import_layers_py/analyzer/analyzer.py",
-        "to": "src/import_layers_py/dto/config.py"
-    },
-    {
-        "from": "src/import_layers_py/analyzer/analyzer.py",
-        "to": "src/import_layers_py/project/project.py"
-    },
-    {
-        "from": "src/import_layers_py/analyzer/app.py",
-        "to": "src/import_layers_py/analyzer/analyzer.py"
-    },
-    {
-        "from": "src/import_layers_py/analyzer/app.py",
-        "to": "src/import_layers_py/config/config_service.py"
-    },
-    {
-        "from": "src/import_layers_py/analyzer/app.py",
-        "to": "src/import_layers_py/project/project.py"
-    },
-    {
-        "from": "src/import_layers_py/analyzer/import_checker.py",
-        "to": "src/import_layers_py/analyzer/import_resolver.py"
-    },
-    {
-        "from": "src/import_layers_py/analyzer/import_checker.py",
-        "to": "src/import_layers_py/analyzer/layer_policy.py"
-    },
-    {
-        "from": "src/import_layers_py/analyzer/import_checker.py",
-        "to": "src/import_layers_py/dto/analysis_result.py"
-    },
-    {
-        "from": "src/import_layers_py/analyzer/import_checker.py",
-        "to": "src/import_layers_py/project/project.py"
-    },
-    {
-        "from": "src/import_layers_py/analyzer/import_resolver.py",
-        "to": "src/import_layers_py/analyzer/dynamic_imports.py"
-    },
-    {
-        "from": "src/import_layers_py/analyzer/import_resolver.py",
-        "to": "src/import_layers_py/project/project.py"
-    },
-    {
-        "from": "src/import_layers_py/config/config_service.py",
-        "to": "src/import_layers_py/dto/config.py"
-    }
-]
+{
+    "src/import_layers_py/__main__.py": [
+        "src/import_layers_py/analyzer/app.py"
+    ],
+    "src/import_layers_py/analyzer/analyzer.py": [
+        "src/import_layers_py/analyzer/import_checker.py",
+        "src/import_layers_py/dto/analysis_result.py",
+        "src/import_layers_py/dto/config.py",
+        "src/import_layers_py/project/project.py"
+    ],
+    "src/import_layers_py/analyzer/app.py": [
+        "src/import_layers_py/analyzer/analyzer.py",
+        "src/import_layers_py/config/config_service.py",
+        "src/import_layers_py/project/project.py"
+    ],
+    "src/import_layers_py/analyzer/import_checker.py": [
+        "src/import_layers_py/analyzer/import_resolver.py",
+        "src/import_layers_py/analyzer/layer_policy.py",
+        "src/import_layers_py/dto/analysis_result.py",
+        "src/import_layers_py/project/project.py"
+    ],
+    "src/import_layers_py/analyzer/import_resolver.py": [
+        "src/import_layers_py/analyzer/dynamic_imports.py",
+        "src/import_layers_py/project/project.py"
+    ],
+    "src/import_layers_py/config/config_service.py": [
+        "src/import_layers_py/dto/config.py"
+    ]
+}

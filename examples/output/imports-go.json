@@ -1,114 +1,50 @@
-[
-    {
-        "from": "cmd/main.go",
-        "to": "internal/analyzer/analyzer.go"
-    },
-    {
-        "from": "cmd/main.go",
-        "to": "internal/analyzer/project.go"
-    },
-    {
-        "from": "cmd/main.go",
-        "to": "internal/cli/cli.go"
-    },
-    {
-        "from": "cmd/main.go",
-        "to": "internal/config/config.go"
-    },
-    {
-        "from": "examples/basic/high/high.go",
-        "to": "examples/basic/low/low.go"
-    },
-    {
-        "from": "examples/basic/main.go",
-        "to": "examples/basic/high/high.go"
-    },
-    {
-        "from": "examples/basic/main.go",
-        "to": "examples/basic/low/low.go"
-    },
-    {
-        "from": "internal/analyzer/analyzer.go",
-        "to": "internal/config/config.go"
-    },
-    {
-        "from": "internal/analyzer/analyzer.go",
-        "to": "internal/filechecker/filechecker.go"
-    },
-    {
-        "from": "internal/analyzer/analyzer.go",
-        "to": "internal/layers/policy.go"
-    },
-    {
-        "from": "internal/analyzer/analyzer.go",
-        "to": "internal/project/project.go"
-    },
-    {
-        "from": "internal/analyzer/analyzer.go",
-        "to": "internal/project/selection.go"
-    },
-    {
-        "from": "internal/analyzer/analyzer_test.go",
-        "to": "internal/config/config.go"
-    },
-    {
-        "from": "internal/analyzer/analyzer_test.go",
-        "to": "internal/layers/policy.go"
-    },
-    {
-        "from": "internal/analyzer/ignore_test.go",
-        "to": "internal/config/config.go"
-    },
-    {
-        "from": "internal/analyzer/ignore_test.go",
-        "to": "internal/layers/policy.go"
-    },
-    {
-        "from": "internal/analyzer/project.go",
-        "to": "internal/config/config.go"
-    },
-    {
-        "from": "internal/analyzer/project.go",
-        "to": "internal/filechecker/filechecker.go"
-    },
-    {
-        "from": "internal/analyzer/project.go",
-        "to": "internal/project/project.go"
-    },
-    {
-        "from": "internal/analyzer/project.go",
-        "to": "internal/project/selection.go"
-    },
-    {
-        "from": "internal/cli/cli.go",
-        "to": "internal/analyzer/analyzer.go"
-    },
-    {
-        "from": "internal/cli/cli.go",
-        "to": "internal/analyzer/project.go"
-    },
-    {
-        "from": "internal/cli/cli.go",
-        "to": "internal/layers/policy.go"
-    },
-    {
-        "from": "internal/cli/cli_test.go",
-        "to": "internal/analyzer/analyzer.go"
-    },
-    {
-        "from": "internal/cli/cli_test.go",
-        "to": "internal/analyzer/project.go"
-    },
-    {
-        "from": "internal/config/config.go",
-        "to": "internal/layers/policy.go"
-    },
-    {
-        "from": "internal/config/config.go",
-        "to": "internal/project/project.go"
-    },
-    {
-        "from": "internal/config/config.go",
-        "to": "internal/project/selection.go"
-    }
-]
+{
+    "cmd/main.go": [
+        "internal/analyzer/analyzer.go",
+        "internal/analyzer/project.go",
+        "internal/cli/cli.go",
+        "internal/config/config.go"
+    ],
+    "examples/basic/high/high.go": [
+        "examples/basic/low/low.go"
+    ],
+    "examples/basic/main.go": [
+        "examples/basic/high/high.go",
+        "examples/basic/low/low.go"
+    ],
+    "internal/analyzer/analyzer.go": [
+        "internal/config/config.go",
+        "internal/filechecker/filechecker.go",
+        "internal/layers/policy.go",
+        "internal/project/project.go",
+        "internal/project/selection.go"
+    ],
+    "internal/analyzer/analyzer_test.go": [
+        "internal/config/config.go",
+        "internal/layers/policy.go"
+    ],
+    "internal/analyzer/ignore_test.go": [
+        "internal/config/config.go",
+        "internal/layers/policy.go"
+    ],
+    "internal/analyzer/project.go": [
+        "internal/config/config.go",
+        "internal/filechecker/filechecker.go",
+        "internal/project/project.go",
+        "internal/project/selection.go"
+    ],
+    "internal/cli/cli.go": [
+        "internal/analyzer/analyzer.go",
+        "internal/analyzer/project.go",
+        "internal/layers/policy.go"
+    ],
+    "internal/cli/cli_test.go": [
+        "internal/analyzer/analyzer.go",
+        "internal/analyzer/project.go"
+    ],
+    "internal/config/config.go": [
+        "internal/layers/policy.go",
+        "internal/project/project.go",
+        "internal/project/selection.go"
+    ]
+}
