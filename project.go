@@ -25,6 +25,13 @@ type projectReference struct {
 	ToLayer        string   `json:"toLayer,omitempty"`
 }
 
+type projectViolation struct {
+	edge
+	Line      int    `json:"line,omitempty"`
+	FromLayer string `json:"fromLayer"`
+	ToLayer   string `json:"toLayer"`
+}
+
 type projectRequest struct {
 	Language    string
 	Root        string
@@ -112,11 +119,15 @@ func runProject(toolRoot string, input io.Reader, output io.Writer) error {
 		return fmt.Errorf("degra-checker: %w", err)
 	}
 	violations := make([]string, 0, len(issues))
+	details := make([]projectViolation, 0, len(issues))
 	for _, issue := range issues {
 		if issue.Index < 0 || issue.Index >= len(references) {
 			return errors.New("degra-checker returned an invalid reference index")
 		}
 		ref := references[issue.Index]
+		details = append(details, projectViolation{
+			edge: ref.edge, Line: ref.Line, FromLayer: issue.FromLayer, ToLayer: issue.ToLayer,
+		})
 		location := ref.From
 		if ref.Line > 0 {
 			location += ":" + strconv.Itoa(ref.Line)
@@ -125,9 +136,10 @@ func runProject(toolRoot string, input io.Reader, output io.Writer) error {
 			location, ref.Specifier, issue.FromLayer, issue.ToLayer))
 	}
 	return json.NewEncoder(output).Encode(struct {
-		Edges      []edge   `json:"edges"`
-		Violations []string `json:"violations"`
-	}{edges, violations})
+		Edges            []edge             `json:"edges"`
+		Violations       []string           `json:"violations"`
+		ViolationDetails []projectViolation `json:"violationDetails"`
+	}{edges, violations, details})
 }
 
 func projectTool(name, root, temp, interpreter string) ([]string, error) {
