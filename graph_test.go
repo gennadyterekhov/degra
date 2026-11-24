@@ -48,7 +48,7 @@ func TestGraphs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.lang, func(t *testing.T) {
 			var out bytes.Buffer
-			if err := run([]string{"--lang", tt.lang, "--go-module", tt.module}, strings.NewReader(tt.input), &out); err != nil {
+			if err := run([]string{"--graph-edges", "--lang", tt.lang, "--go-module", tt.module}, strings.NewReader(tt.input), &out); err != nil {
 				t.Fatal(err)
 			}
 			if got := strings.TrimSpace(out.String()); got != tt.want {
@@ -58,11 +58,33 @@ func TestGraphs(t *testing.T) {
 	}
 }
 
-func TestSingleFile(t *testing.T) {
+func TestGroupedGraph(t *testing.T) {
+	input := `{
+		"z.py":{"_type":"Module","body":[{"_type":"Import","names":[{"name":"b"},{"name":"a"},{"name":"a"}]}]},
+		"a.py":{"_type":"Module","body":[{"_type":"Import","names":[{"name":"b"}]}]},
+		"b.py":{"_type":"Module"}
+	}`
 	var out bytes.Buffer
-	err := run([]string{"--lang", "php", "--file-name", "main.php"}, strings.NewReader(`[]`), &out)
-	if err != nil || out.String() != "[]\n" {
-		t.Fatalf("output %q, error %v", out.String(), err)
+	if err := run([]string{"--lang", "py"}, strings.NewReader(input), &out); err != nil {
+		t.Fatal(err)
+	}
+	want := "{\"a.py\":[\"b.py\"],\"z.py\":[\"a.py\",\"b.py\"]}\n"
+	if out.String() != want {
+		t.Fatalf("got %q; want %q", out.String(), want)
+	}
+}
+
+func TestSingleFile(t *testing.T) {
+	for _, tt := range []struct{ flag, want string }{{"", "{}\n"}, {"--graph-edges", "[]\n"}} {
+		var out bytes.Buffer
+		args := []string{"--lang", "php", "--file-name", "main.php"}
+		if tt.flag != "" {
+			args = append(args, tt.flag)
+		}
+		err := run(args, strings.NewReader(`[]`), &out)
+		if err != nil || out.String() != tt.want {
+			t.Fatalf("output %q, error %v", out.String(), err)
+		}
 	}
 }
 
