@@ -169,7 +169,11 @@ func projectTool(name, root, temp, interpreter string) ([]string, error) {
 		return []string{interpreter, filepath.Join(root, name, script[1])}, nil
 	}
 	binary := filepath.Join(temp, name)
-	_, err := commandOutput(exec.Command("go", "-C", filepath.Join(root, name), "build", "-o", binary, "."))
+	packagePath := "."
+	if name == "degra-checker" {
+		packagePath = "./cmd"
+	}
+	_, err := commandOutput(exec.Command("go", "-C", filepath.Join(root, name), "build", "-o", binary, packagePath))
 	return []string{binary}, err
 }
 
