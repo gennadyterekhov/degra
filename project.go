@@ -32,13 +32,54 @@ type projectViolation struct {
 	ToLayer   string `json:"toLayer"`
 }
 
-type projectRequest struct {
+type parseRequest struct {
 	Language    string
 	Root        string
 	Interpreter string
-	Layers      []string
 	Files       []string
-	References  []projectReference
+}
+
+type projectRequest struct {
+	Language   string
+	Layers     []string
+	Trees      document
+	References []projectReference
+}
+
+func parseProject(toolRoot string, input io.Reader, output io.Writer) error {
+	var request parseRequest
+	if err := json.NewDecoder(input).Decode(&request); err != nil {
+		return err
+	}
+	if !slices.Contains([]string{"go", "js", "php", "py"}, request.Language) {
+		return errors.New("unknown project language")
+	}
+	if len(request.Files) == 0 {
+		_, err := io.WriteString(output, "{\"trees\":{},\"errors\":{}}\n")
+		return err
+	}
+	temp, err := os.MkdirTemp("", "degra-parse-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(temp)
+	astCommand, err := projectTool("ast-"+request.Language, toolRoot, temp, request.Interpreter)
+	if err != nil {
+		return err
+	}
+	manifest, err := json.Marshal(request.Files)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(astCommand[0], append(slices.Clone(astCommand[1:]), "--project-files")...)
+	cmd.Dir = request.Root
+	cmd.Stdin = bytes.NewReader(manifest)
+	data, err := commandOutput(cmd)
+	if err != nil {
+		return err
+	}
+	_, err = output.Write(data)
+	return err
 }
 
 func runProject(toolRoot string, input io.Reader, output io.Writer) error {
@@ -55,34 +96,7 @@ func runProject(toolRoot string, input io.Reader, output io.Writer) error {
 	}
 	defer os.RemoveAll(temp)
 
-	astCommand, err := projectTool("ast-"+request.Language, toolRoot, temp, request.Interpreter)
-	if err != nil {
-		return err
-	}
-	files := make(document)
-	if len(request.Files) > 0 {
-		manifest, err := json.Marshal(request.Files)
-		if err != nil {
-			return err
-		}
-		cmd := exec.Command(astCommand[0], append(slices.Clone(astCommand[1:]), "--files-from-stdin")...)
-		cmd.Dir = request.Root
-		cmd.Stdin = bytes.NewReader(manifest)
-		data, err := commandOutput(cmd)
-		if err != nil {
-			return err
-		}
-		files, err = readDocument(bytes.NewReader(data), "")
-		if err != nil {
-			return err
-		}
-		for _, file := range request.Files {
-			if !files.contains(file) {
-				return fmt.Errorf("AST parser omitted %s", file)
-			}
-		}
-	}
-	edges, references, err := resolveProjectReferences(request.Language, files, request.References)
+	edges, references, err := resolveProjectReferences(request.Language, request.Trees, request.References)
 	if err != nil {
 		return err
 	}

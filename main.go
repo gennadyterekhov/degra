@@ -119,6 +119,8 @@ func main() {
 	var err error
 	if len(os.Args) == 3 && os.Args[1] == "--project" {
 		err = runProject(os.Args[2], os.Stdin, os.Stdout)
+	} else if len(os.Args) == 3 && os.Args[1] == "--parse-project" {
+		err = parseProject(os.Args[2], os.Stdin, os.Stdout)
 	} else {
 		err = run(os.Args[1:], os.Stdin, os.Stdout)
 	}
