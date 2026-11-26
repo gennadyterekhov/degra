@@ -1,4 +1,4 @@
-package main
+package graph
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ type goAST struct {
 	}
 }
 
-func goEdges(files document, module string, add func(string, string)) error {
+func goEdges(files Document, module string, add func(string, string)) error {
 	packages := make(map[string][]string)
 	trees := make(map[string]goAST)
 	for _, name := range files.paths() {

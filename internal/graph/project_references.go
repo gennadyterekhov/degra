@@ -1,10 +1,22 @@
-package main
+package graph
 
 import (
 	"encoding/json"
 	"fmt"
 	"strconv"
 )
+
+type Reference struct {
+	Edge
+	Targets        []string `json:"targets,omitempty"`
+	Syntax         []string `json:"syntax,omitempty"`
+	ResolvedLayers bool     `json:"resolvedLayers,omitempty"`
+	Unlocated      bool     `json:"unlocated,omitempty"`
+	Specifier      string   `json:"specifier"`
+	Line           int      `json:"line"`
+	FromLayer      string   `json:"fromLayer,omitempty"`
+	ToLayer        string   `json:"toLayer,omitempty"`
+}
 
 type importSites struct {
 	names map[string]bool
@@ -13,7 +25,7 @@ type importSites struct {
 
 // Build the scoped graph by joining AST import sites with the targets that the
 // frontend resolved under the project's package, workspace and selection rules.
-func resolveProjectReferences(language string, files document, candidates []projectReference) ([]edge, []projectReference, error) {
+func ResolveProjectReferences(language string, files Document, candidates []Reference) ([]Edge, []Reference, error) {
 	sites := make(map[string]importSites, len(files))
 	for name, raw := range files {
 		imports, err := findImportSites(language, raw)
@@ -23,9 +35,9 @@ func resolveProjectReferences(language string, files document, candidates []proj
 		sites[name] = imports
 	}
 
-	seen := make(map[edge]bool)
-	edges := []edge{}
-	references := make([]projectReference, 0, len(candidates))
+	seen := make(map[Edge]bool)
+	edges := []Edge{}
+	references := make([]Reference, 0, len(candidates))
 	for _, ref := range candidates {
 		imports, parsed := sites[ref.From]
 		if parsed && !ref.Unlocated && !imports.matches(ref) {
@@ -36,7 +48,7 @@ func resolveProjectReferences(language string, files document, candidates []proj
 			targets = append(targets, ref.To)
 		}
 		for _, to := range targets {
-			e := edge{ref.From, to}
+			e := Edge{ref.From, to}
 			if !seen[e] {
 				seen[e] = true
 				edges = append(edges, e)
@@ -48,7 +60,7 @@ func resolveProjectReferences(language string, files document, candidates []proj
 	return edges, references, nil
 }
 
-func (sites importSites) matches(ref projectReference) bool {
+func (sites importSites) matches(ref Reference) bool {
 	if len(ref.Syntax) == 0 {
 		return sites.lines[ref.Line]
 	}

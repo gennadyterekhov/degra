@@ -1,4 +1,4 @@
-package main
+package graph
 
 import (
 	"path"
@@ -16,7 +16,7 @@ const (
 	phpConstant = 3
 )
 
-func phpEdges(files document, add func(string, string)) error {
+func phpEdges(files Document, add func(string, string)) error {
 	symbols := make(map[phpSymbol]string)
 	imports := make(map[string][]phpSymbol)
 	for _, from := range files.paths() {

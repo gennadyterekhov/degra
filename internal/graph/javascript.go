@@ -1,4 +1,4 @@
-package main
+package graph
 
 import (
 	"path"
@@ -20,7 +20,7 @@ const (
 	tsSourceFile              = 308
 )
 
-func jsEdges(files document, add func(string, string)) error {
+func jsEdges(files Document, add func(string, string)) error {
 	for _, from := range files.paths() {
 		tree, err := readTree(files, from, func(v any) bool { return object(v).number("kind") == tsSourceFile })
 		if err != nil {
@@ -60,7 +60,7 @@ func jsSpecifier(n node) node {
 
 var jsExtensions = []string{".js", ".json", ".ts", ".tsx", ".jsx", ".mts", ".cts", ".mjs", ".cjs", ".d.ts"}
 
-func jsTarget(files document, from, name string) string {
+func jsTarget(files Document, from, name string) string {
 	dir := path.Dir(from)
 	switch {
 	case name == "", strings.HasPrefix(name, "node:"), strings.Contains(name, ":"):
@@ -81,7 +81,7 @@ func jsTarget(files document, from, name string) string {
 	}
 }
 
-func jsPath(files document, base string) string {
+func jsPath(files Document, base string) string {
 	ext := path.Ext(base)
 	stem := strings.TrimSuffix(base, ext)
 	var substitutions []string

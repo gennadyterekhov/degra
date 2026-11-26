@@ -1,4 +1,4 @@
-package main
+package graph
 
 import (
 	"encoding/json"
@@ -46,7 +46,7 @@ func walk(value any, visit func(node)) {
 	}
 }
 
-func readTree(files document, name string, valid func(any) bool) (any, error) {
+func readTree(files Document, name string, valid func(any) bool) (any, error) {
 	var tree any
 	if err := json.Unmarshal(files[name], &tree); err != nil {
 		return nil, fmt.Errorf("%s: %w", name, err)

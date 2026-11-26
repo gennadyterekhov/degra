@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"bytes"
@@ -48,7 +48,7 @@ func TestGraphs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.lang, func(t *testing.T) {
 			var out bytes.Buffer
-			if err := run([]string{"--graph-edges", "--lang", tt.lang, "--go-module", tt.module}, strings.NewReader(tt.input), &out); err != nil {
+			if err := Run([]string{"--graph-edges", "--lang", tt.lang, "--go-module", tt.module}, strings.NewReader(tt.input), &out); err != nil {
 				t.Fatal(err)
 			}
 			if got := strings.TrimSpace(out.String()); got != tt.want {
@@ -65,7 +65,7 @@ func TestGroupedGraph(t *testing.T) {
 		"b.py":{"_type":"Module"}
 	}`
 	var out bytes.Buffer
-	if err := run([]string{"--lang", "py"}, strings.NewReader(input), &out); err != nil {
+	if err := Run([]string{"--lang", "py"}, strings.NewReader(input), &out); err != nil {
 		t.Fatal(err)
 	}
 	want := "{\"a.py\":[\"b.py\"],\"z.py\":[\"a.py\",\"b.py\"]}\n"
@@ -81,7 +81,7 @@ func TestSingleFile(t *testing.T) {
 		if tt.flag != "" {
 			args = append(args, tt.flag)
 		}
-		err := run(args, strings.NewReader(`[]`), &out)
+		err := Run(args, strings.NewReader(`[]`), &out)
 		if err != nil || out.String() != tt.want {
 			t.Fatalf("output %q, error %v", out.String(), err)
 		}
@@ -91,7 +91,7 @@ func TestSingleFile(t *testing.T) {
 func TestInvalidInput(t *testing.T) {
 	for _, input := range []string{`[]`, `{"a.py":{"kind":308}}`, `{"a.py":{"_type":"Module"}} {}`} {
 		var out bytes.Buffer
-		if err := run([]string{"--lang", "py"}, strings.NewReader(input), &out); err == nil || out.Len() != 0 {
+		if err := Run([]string{"--lang", "py"}, strings.NewReader(input), &out); err == nil || out.Len() != 0 {
 			t.Errorf("input %q produced %q, error %v", input, out.String(), err)
 		}
 	}

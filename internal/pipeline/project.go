@@ -1,4 +1,4 @@
-package main
+package pipeline
 
 import (
 	"bytes"
@@ -11,22 +11,12 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+
+	"github.com/gennadyterekhov/degra/internal/graph"
 )
 
-type projectReference struct {
-	edge
-	Targets        []string `json:"targets,omitempty"`
-	Syntax         []string `json:"syntax,omitempty"`
-	ResolvedLayers bool     `json:"resolvedLayers,omitempty"`
-	Unlocated      bool     `json:"unlocated,omitempty"`
-	Specifier      string   `json:"specifier"`
-	Line           int      `json:"line"`
-	FromLayer      string   `json:"fromLayer,omitempty"`
-	ToLayer        string   `json:"toLayer,omitempty"`
-}
-
 type projectViolation struct {
-	edge
+	graph.Edge
 	Line      int    `json:"line,omitempty"`
 	FromLayer string `json:"fromLayer"`
 	ToLayer   string `json:"toLayer"`
@@ -42,11 +32,11 @@ type parseRequest struct {
 type projectRequest struct {
 	Language   string
 	Layers     []string
-	Trees      document
-	References []projectReference
+	Trees      graph.Document
+	References []graph.Reference
 }
 
-func parseProject(toolRoot string, input io.Reader, output io.Writer) error {
+func ParseProject(toolRoot string, input io.Reader, output io.Writer) error {
 	var request parseRequest
 	if err := json.NewDecoder(input).Decode(&request); err != nil {
 		return err
@@ -82,7 +72,7 @@ func parseProject(toolRoot string, input io.Reader, output io.Writer) error {
 	return err
 }
 
-func runProject(toolRoot string, input io.Reader, output io.Writer) error {
+func RunProject(toolRoot string, input io.Reader, output io.Writer) error {
 	var request projectRequest
 	if err := json.NewDecoder(input).Decode(&request); err != nil {
 		return err
@@ -96,11 +86,11 @@ func runProject(toolRoot string, input io.Reader, output io.Writer) error {
 	}
 	defer os.RemoveAll(temp)
 
-	edges, references, err := resolveProjectReferences(request.Language, request.Trees, request.References)
+	edges, references, err := graph.ResolveProjectReferences(request.Language, request.Trees, request.References)
 	if err != nil {
 		return err
 	}
-	graph, err := json.Marshal(edges)
+	graphJSON, err := json.Marshal(edges)
 	if err != nil {
 		return err
 	}
@@ -118,7 +108,7 @@ func runProject(toolRoot string, input io.Reader, output io.Writer) error {
 		return err
 	}
 	cmd := exec.Command(checker[0], append(slices.Clone(checker[1:]), "--config", configPath, "--references", referencesPath)...)
-	cmd.Stdin = bytes.NewReader(graph)
+	cmd.Stdin = bytes.NewReader(graphJSON)
 	data, err := commandOutput(cmd)
 	var status *exec.ExitError
 	if err != nil && (!errors.As(err, &status) || status.ExitCode() != 1) {
@@ -140,7 +130,7 @@ func runProject(toolRoot string, input io.Reader, output io.Writer) error {
 		}
 		ref := references[issue.Index]
 		details = append(details, projectViolation{
-			edge: ref.edge, Line: ref.Line, FromLayer: issue.FromLayer, ToLayer: issue.ToLayer,
+			Edge: ref.Edge, Line: ref.Line, FromLayer: issue.FromLayer, ToLayer: issue.ToLayer,
 		})
 		location := ref.From
 		if ref.Line > 0 {
@@ -150,7 +140,7 @@ func runProject(toolRoot string, input io.Reader, output io.Writer) error {
 			location, ref.Specifier, issue.FromLayer, issue.ToLayer))
 	}
 	return json.NewEncoder(output).Encode(struct {
-		Edges            []edge             `json:"edges"`
+		Edges            []graph.Edge       `json:"edges"`
 		Violations       []string           `json:"violations"`
 		ViolationDetails []projectViolation `json:"violationDetails"`
 	}{edges, violations, details})

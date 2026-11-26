@@ -1,4 +1,4 @@
-package main
+package graph
 
 import (
 	"path"
@@ -6,7 +6,7 @@ import (
 	"unicode"
 )
 
-func pythonEdges(files document, add func(string, string)) error {
+func pythonEdges(files Document, add func(string, string)) error {
 	dirs := make(map[string]bool)
 	for name := range files {
 		for dir := path.Dir(name); !dirs[dir]; dir = path.Dir(dir) {
@@ -71,7 +71,7 @@ func pythonEdges(files document, add func(string, string)) error {
 	return nil
 }
 
-func pythonModule(files document, dirs map[string]bool, name string, roots []string) string {
+func pythonModule(files Document, dirs map[string]bool, name string, roots []string) string {
 	if name == "" {
 		if len(roots) == 1 {
 			return path.Join(roots[0], "__init__.py")

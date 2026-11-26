@@ -3,7 +3,7 @@
 `degra` читает JSON от `ast-go`, `ast-js`, `ast-php` или `ast-py` из stdin и печатает в stdout зависимости между файлами из этого JSON.
 
 ```sh
-go build .
+go build -o degra ./cmd
 ./degra --lang go --go-module github.com/gennadyterekhov/import-layers-go < examples/ast-go-no-vendor.json
 ./degra --lang js < examples/ast-js-no-vendor.json
 ./degra --lang php < examples/ast-php-no-vendor.json
