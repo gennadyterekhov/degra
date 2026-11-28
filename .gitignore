@@ -1,3 +1,4 @@
 examples/with_vendor
 examples/ast-php-er.json
 /examples/output/ast-php-er-imports.json
+/examples/er

@@ -12,6 +12,9 @@ import (
 )
 
 func Run(args []string, input io.Reader, output io.Writer) error {
+	if len(args) > 0 && args[0] == "reverse" {
+		return runReverse(args[1:], input, output)
+	}
 	if len(args) == 2 {
 		switch args[0] {
 		case "--project":
