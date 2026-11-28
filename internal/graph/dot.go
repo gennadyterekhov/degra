@@ -9,11 +9,16 @@ import (
 	"strings"
 )
 
-// WriteDOT uses compact nodes for the overview and puts full paths in tooltips.
-func (a Adjacency) WriteDOT(output io.Writer) error {
+// WriteDOT puts full paths in tooltips and optionally in labels.
+func (a Adjacency) WriteDOT(output io.Writer, showLabels bool) error {
 	nodes := slices.Sorted(maps.Keys(a))
 	var dot strings.Builder
-	dot.WriteString("digraph imports {\n  node [shape=point, width=0.12];\n")
+	dot.WriteString("digraph imports {\n")
+	if showLabels {
+		dot.WriteString("  node [shape=box, style=rounded, fontsize=10];\n")
+	} else {
+		dot.WriteString("  node [shape=point, width=0.12, label=\"\"];\n")
+	}
 	dot.WriteString("  edge [color=\"#64748b80\", arrowsize=0.45];\n")
 	ids := make(map[string]int, len(nodes))
 	groups := make(map[string]string)
@@ -26,8 +31,12 @@ func (a Adjacency) WriteDOT(output io.Writer) error {
 			color = colors[len(groups)%len(colors)]
 			groups[group] = color
 		}
-		label := strconv.Quote(node)
-		fmt.Fprintf(&dot, "  n%d [color=%q, label=%s, tooltip=%s];\n", i, color, label, label)
+		path := strconv.Quote(node)
+		fmt.Fprintf(&dot, "  n%d [color=%q, tooltip=%s", i, color, path)
+		if showLabels {
+			fmt.Fprintf(&dot, ", label=%s", path)
+		}
+		dot.WriteString("];\n")
 	}
 	for i, from := range nodes {
 		for _, to := range a[from] {

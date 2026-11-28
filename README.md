@@ -36,7 +36,7 @@ go build -o degra ./cmd
 `degra reverse` принимает JSON-граф в любом из двух форматов `degra`. По умолчанию команда выводит объект, где ключ — импортируемый файл, а значение — отсортированный список файлов, которые импортируют его напрямую.
 
 ```sh
-go run ./cmd reverse < examples/output/ast-php-er-imports.json > importers.json
+go run ./cmd reverse < examples/output/imports-php.json > importers.json
 ```
 
 Например, из `{"main.php":["lib.php"]}` получится `{"lib.php":["main.php"],"main.php":[]}`. В результате остаются все файлы из входного графа, включая явно заданные изолированные узлы. Команда обращает каждое прямое ребро. Циклы и петли хранятся как обычные ссылки между ключами.
@@ -46,19 +46,26 @@ go run ./cmd reverse < examples/output/ast-php-er-imports.json > importers.json
 Установите [Graphviz](https://graphviz.org/download/). Из каталога `degra` выполните:
 
 ```sh
-go run ./cmd reverse --format dot < examples/output/ast-php-er-imports.json > examples/output/er-importers.dot
+go run ./cmd reverse --format dot < examples/er/output/ast-php-er-imports.json > examples/er/output/er-importers.dot
 
-sfdp -Goverlap=prism -Gsplines=line -Tsvg examples/output/er-importers.dot -o examples/output/er-importers.svg
+sfdp -Goverlap=prism -Gsplines=line -Tsvg examples/er/output/er-importers.dot -o examples/er/output/er-importers.svg
 ```
 
-Откройте `importers.svg` в браузере. Точки окрашены по первому сегменту пути, полный путь виден при наведении. Стрелка идёт от импортируемого файла к импортирующему. На плотных участках отдельные связи удобнее рассматривать с увеличением. Раскладка `sfdp` рассчитана на большие графы. [Документация Graphviz sfdp](https://graphviz.org/docs/layouts/sfdp/)
+Откройте SVG в браузере. По умолчанию вершины подписаны полными путями и окрашены по первому сегменту пути. Стрелка идёт от импортируемого файла к импортирующему. Раскладка `sfdp` рассчитана на большие графы. [Документация Graphviz sfdp](https://graphviz.org/docs/layouts/sfdp/)
+
+Для компактного обзора добавьте `--no-labels`. Полные пути останутся во всплывающих подсказках.
+
+```sh
+go run ./cmd reverse --format dot --no-labels < examples/er/output/imports-php.json > importers-compact.dot
+sfdp -Goverlap=prism -Gsplines=line -Tsvg importers-compact.dot -o importers-compact.svg
+```
 
 Для иерархической раскладки слева направо можно использовать тот же DOT:
 
 ```sh
-dot -Grankdir=LR -Tsvg examples/output/er-importers.dot -o importers-layered.svg
+dot -Grankdir=LR -Tsvg examples/er/output/er-importers.dot -o examples/er/output/importers-layered.svg
 ```
 
-Для интерактивной работы с узлами и фильтрами откройте `importers.dot` в Gephi как ориентированный граф. [Документация импорта DOT в Gephi](https://docs.gephi.org/desktop/User_Manual/Import/GraphViz_DOT_Format/)
+Для интерактивной работы с узлами и фильтрами откройте `er-importers.dot` в Gephi как ориентированный граф. [Документация импорта DOT в Gephi](https://docs.gephi.org/desktop/User_Manual/Import/GraphViz_DOT_Format/)
 
 Тесты запускаются командой `go test ./...`.

@@ -30,10 +30,23 @@ func TestReverseDOT(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`digraph imports {`, `tooltip="isolated.php"`, "n0 -> n1;", "n1 -> n0;"} {
+	for _, want := range []string{`digraph imports {`, `shape=box`, `label="isolated.php"`, `tooltip="isolated.php"`, "n0 -> n1;", "n1 -> n0;"} {
 		if !strings.Contains(out.String(), want) {
 			t.Errorf("missing %q in %s", want, &out)
 		}
+	}
+}
+
+func TestReverseDOTWithoutLabels(t *testing.T) {
+	var out bytes.Buffer
+	err := Run([]string{"reverse", "--format", "dot", "--no-labels"}, strings.NewReader(`{"src/a.php":["src/b.php"]}`), &out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dot := out.String()
+	if !strings.Contains(dot, "shape=point") || !strings.Contains(dot, `tooltip="src/a.php"`) ||
+		strings.Contains(dot, `label="src/a.php"`) || !strings.Contains(dot, "n1 -> n0;") {
+		t.Fatalf("unexpected DOT: %s", dot)
 	}
 }
 
