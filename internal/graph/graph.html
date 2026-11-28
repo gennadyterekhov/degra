@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Граф импортов · degra</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #19253a;
+    --muted: #53627a;
+    --line: #dce2ea;
+    --selected: #233e88;
+    --direct: #087b69;
+    --transitive: #ab4c11;
+    font: 15px/1.5 system-ui, sans-serif;
+    color: var(--ink);
+    background: #f6f8fb;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  header { background: #19253a; color: #fff; padding: 14px 24px; display: flex; align-items: baseline; gap: 20px; flex-wrap: wrap; }
+  h1 { font-size: 20px; margin: 0; }
+  #summary { color: #cbd5e7; }
+  main { display: grid; grid-template-columns: minmax(245px, 310px) minmax(0, 1fr); min-height: calc(100dvh - 58px); }
+  aside { background: #fff; padding: 20px; border-right: 1px solid var(--line); }
+  label { display: block; font-weight: 650; margin-bottom: 6px; }
+  input, button { font: inherit; color: inherit; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  input { width: 100%; padding: 8px 10px; }
+  button { padding: 5px 10px; cursor: pointer; }
+  button:hover, button:focus-visible { border-color: var(--selected); }
+  p { margin: 8px 0; }
+  #results { display: grid; gap: 4px; max-height: 35vh; overflow: auto; }
+  #results button { text-align: left; overflow-wrap: anywhere; }
+  #details { margin-top: 17px; padding-top: 12px; border-top: 1px solid var(--line); }
+  #selection { font-weight: 650; overflow-wrap: anywhere; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .legend { display: flex; gap: 14px; color: var(--muted); font-size: 13px; flex-wrap: wrap; }
+  .legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 50%; background: var(--dot); }
+  .selected { --dot: var(--selected); }
+  .direct { --dot: var(--direct); }
+  .transitive { --dot: var(--transitive); }
+  #workspace { display: flex; flex-direction: column; min-width: 0; }
+  #toolbar { padding: 10px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  #toolbar .legend { margin-left: auto; }
+  #viewport { position: relative; flex: 1; min-height: 340px; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; position: absolute; touch-action: none; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+  #hover { position: absolute; pointer-events: none; bottom: 12px; left: 12px; max-width: calc(100% - 24px); padding: 6px 10px; background: #19253a; color: #fff; border-radius: 6px; overflow-wrap: anywhere; }
+  [hidden] { display: none !important; }
+  @media (max-width: 680px) {
+    main { grid-template-columns: 1fr; }
+    aside { border-right: 0; border-bottom: 1px solid var(--line); padding: 12px 16px; }
+    #results { max-height: 25vh; }
+    #viewport { min-height: 55vh; }
+  }
+</style>
+</head>
+<body>
+<header><h1>Граф импортов</h1><span id="summary"></span></header>
+<main>
+  <aside>
+    <label for="search">Найти файл</label>
+    <input id="search" type="search" placeholder="Имя или часть пути" autocomplete="off">
+    <p id="match-count" class="muted" aria-live="polite"></p>
+    <div id="results"></div>
+    <section id="details" aria-live="polite">
+      <p id="selection">Файл не выбран</p>
+      <p id="importer-count" class="muted">Выберите узел или результат поиска, чтобы увидеть его импортёров.</p>
+    </section>
+  </aside>
+  <section id="workspace" aria-label="Граф зависимостей">
+    <div id="toolbar">
+      <button type="button" id="fit">Весь граф</button>
+      <button type="button" id="zoom-in" aria-label="Увеличить">+</button>
+      <button type="button" id="zoom-out" aria-label="Уменьшить">−</button>
+      <button type="button" id="clear">Снять выделение</button>
+      <div class="legend"><span class="selected">Выбранный</span><span class="direct">Прямые</span><span class="transitive">Транзитивные</span></div>
+    </div>
+    <div id="viewport"><canvas aria-label="Узлы и связи графа"></canvas><div id="hover" hidden></div></div>
+  </section>
+</main>
+<script type="application/json" id="graph-data">{{ . }}</script>
+<script>
+"use strict";
+const byID = id => document.getElementById(id);
+const graph = JSON.parse(byID("graph-data").textContent);
+const names = Object.keys(graph).sort();
+const edges = names.flatMap(from => graph[from].map(to => [from, to]));
+const canvas = document.querySelector("canvas");
+const ctx = canvas.getContext("2d");
+const search = byID("search");
+const results = byID("results");
+const hover = byID("hover");
+const ink = { selected: "#233e88", direct: "#087b69", transitive: "#ab4c11" };
+let selected = null;
+let direct = new Set();
+let reachable = new Set();
+let width = 1, height = 1, scale = 1, offsetX = 0, offsetY = 0;
+let matches = [];
+let drag = null;
+
+function layout() {
+  const groups = new Map();
+  for (const name of names) {
+    const slash = name.indexOf("/");
+    const group = slash < 0 ? "Корень" : name.slice(0, slash);
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(name);
+  }
+  const points = new Map();
+  const blocks = [];
+  const rowWidth = Math.max(280, Math.sqrt(names.length) * 36);
+  let x = 0, y = 0, rowHeight = 0, maxX = 0;
+  for (const [group, files] of groups) {
+    const columns = Math.max(1, Math.ceil(Math.sqrt(files.length * 1.4)));
+    const w = Math.max(100, columns * 22 + 24);
+    const h = Math.ceil(files.length / columns) * 22 + 36;
+    if (x && x + w > rowWidth) {
+      x = 0;
+      y += rowHeight + 18;
+      rowHeight = 0;
+    }
+    blocks.push({ group, x, y, w, h });
+    files.forEach((name, i) => points.set(name, {
+      x: x + 24 + i % columns * 22, y: y + 41 + Math.floor(i / columns) * 22,
+    }));
+    maxX = Math.max(maxX, x + w);
+    x += w + 18;
+    rowHeight = Math.max(rowHeight, h);
+  }
+  return { points, blocks, w: Math.max(1, maxX), h: Math.max(1, y + rowHeight) };
+}
+
+const scene = layout();
+byID("summary").textContent = `${names.length} файлов · ${edges.length} связей`;
+
+function draw() {
+  const ratio = canvas.width / width;
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  ctx.translate(offsetX, offsetY);
+  ctx.scale(scale, scale);
+  for (const block of scene.blocks) {
+    ctx.fillStyle = "#edf2f8";
+    ctx.fillRect(block.x, block.y, block.w, block.h);
+    if (scale >= 0.65) {
+      ctx.fillStyle = "#53627a";
+      ctx.font = "12px system-ui, sans-serif";
+      ctx.fillText(block.group, block.x + 10, block.y + 17, block.w - 20);
+    }
+  }
+
+  function edge(from, to, active) {
+    const a = scene.points.get(from);
+    const b = scene.points.get(to);
+    ctx.beginPath();
+    if (from === to) {
+      ctx.arc(a.x + 5, a.y - 5, 6, 0, 2 * Math.PI);
+    } else {
+      const angle = Math.atan2(b.y - a.y, b.x - a.x);
+      const endX = b.x - Math.cos(angle) * 6;
+      const endY = b.y - Math.sin(angle) * 6;
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(endX, endY);
+      if (active) {
+        for (const side of [-1, 1]) {
+          const direction = angle + side * 0.55;
+          ctx.moveTo(endX, endY);
+          ctx.lineTo(endX - Math.cos(direction) * 5, endY - Math.sin(direction) * 5);
+        }
+      }
+    }
+    ctx.stroke();
+  }
+
+  ctx.lineWidth = 0.7;
+  ctx.strokeStyle = selected === null ? "#798ba25c" : "#798ba21f";
+  for (const [from, to] of edges) edge(from, to, false);
+  if (selected !== null) {
+    ctx.lineWidth = 1.4;
+    for (const [from, to] of edges) {
+      if (!reachable.has(from)) continue;
+      ctx.strokeStyle = from === selected ? ink.direct : ink.transitive;
+      edge(from, to, true);
+    }
+  }
+
+  for (const [name, point] of scene.points) {
+    ctx.fillStyle = name === selected ? ink.selected
+      : direct.has(name) ? ink.direct
+      : reachable.has(name) ? ink.transitive
+      : selected === null ? "#647c9b" : "#aeb9ca";
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, name === selected ? 7 : 4.5, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+}
+
+function fit() {
+  scale = Math.min(2, Math.max(1, width - 32) / scene.w, Math.max(1, height - 32) / scene.h);
+  offsetX = (width - scene.w * scale) / 2;
+  offsetY = (height - scene.h * scale) / 2;
+  draw();
+}
+
+function zoom(factor, x, y) {
+  const next = Math.max(Math.min(0.03, scale), Math.min(8, scale * factor));
+  offsetX = x - (x - offsetX) * next / scale;
+  offsetY = y - (y - offsetY) * next / scale;
+  scale = next;
+  draw();
+}
+
+function select(name, reveal = false) {
+  selected = name;
+  direct = new Set();
+  reachable = new Set();
+  if (name !== null) {
+    direct = new Set(graph[name].filter(file => file !== name));
+    reachable.add(name);
+    const pending = [name];
+    for (let i = 0; i < pending.length; i++) {
+      for (const importer of graph[pending[i]]) {
+        if (reachable.has(importer)) continue;
+        reachable.add(importer);
+        pending.push(importer);
+      }
+    }
+    if (reveal) {
+      const point = scene.points.get(name);
+      const x = offsetX + point.x * scale;
+      const y = offsetY + point.y * scale;
+      if (x < 12 || x > width - 12 || y < 12 || y > height - 12) {
+        offsetX = width / 2 - point.x * scale;
+        offsetY = height / 2 - point.y * scale;
+      }
+    }
+  }
+  byID("selection").textContent = name ?? "Файл не выбран";
+  byID("importer-count").textContent = name === null
+    ? "Выберите узел или результат поиска, чтобы увидеть его импортёров."
+    : `Прямые: ${direct.size} · только транзитивные: ${reachable.size - direct.size - 1}`;
+  byID("clear").disabled = name === null;
+  draw();
+}
+
+function updateSearch() {
+  const query = search.value.trim().toLowerCase();
+  matches = query ? names.filter(name => name.toLowerCase().includes(query)) : [];
+  byID("match-count").textContent = query ? `Найдено: ${matches.length}` : "";
+  results.replaceChildren(...matches.map(name => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = name;
+    button.addEventListener("click", () => select(name, true));
+    return button;
+  }));
+}
+
+function nodeAt(x, y) {
+  let best = null;
+  let distance = Math.max(6, 7 * scale);
+  for (const [name, point] of scene.points) {
+    const d = Math.hypot(offsetX + point.x * scale - x, offsetY + point.y * scale - y);
+    if (d < distance) {
+      best = name;
+      distance = d;
+    }
+  }
+  return best;
+}
+
+function cursor(event) {
+  const rect = canvas.getBoundingClientRect();
+  return [event.clientX - rect.left, event.clientY - rect.top];
+}
+
+search.addEventListener("input", updateSearch);
+search.addEventListener("keydown", event => {
+  if (event.key === "Enter" && matches.length) select(matches[0], true);
+});
+document.addEventListener("keydown", event => { if (event.key === "Escape") select(null); });
+byID("clear").addEventListener("click", () => select(null));
+byID("fit").addEventListener("click", fit);
+byID("zoom-in").addEventListener("click", () => zoom(1.25, width / 2, height / 2));
+byID("zoom-out").addEventListener("click", () => zoom(0.8, width / 2, height / 2));
+canvas.addEventListener("wheel", event => {
+  event.preventDefault();
+  zoom(event.deltaY < 0 ? 1.15 : 1 / 1.15, ...cursor(event));
+}, { passive: false });
+canvas.addEventListener("pointerdown", event => {
+  if (!event.isPrimary || event.button !== 0) return;
+  const [x, y] = cursor(event);
+  drag = { x, y, offsetX, offsetY };
+  canvas.setPointerCapture(event.pointerId);
+});
+canvas.addEventListener("pointermove", event => {
+  if (!event.isPrimary) return;
+  const [x, y] = cursor(event);
+  if (drag) {
+    offsetX = drag.offsetX + x - drag.x;
+    offsetY = drag.offsetY + y - drag.y;
+    hover.hidden = true;
+    draw();
+  } else {
+    const name = nodeAt(x, y);
+    hover.hidden = name === null;
+    hover.textContent = name ?? "";
+  }
+});
+canvas.addEventListener("pointerup", event => {
+  if (!event.isPrimary || !drag) return;
+  const [x, y] = cursor(event);
+  if (Math.hypot(x - drag.x, y - drag.y) < 4) select(nodeAt(x, y));
+  drag = null;
+});
+canvas.addEventListener("pointercancel", () => { drag = null; });
+canvas.addEventListener("pointerleave", () => { hover.hidden = true; });
+
+new ResizeObserver(() => {
+  const rect = canvas.getBoundingClientRect();
+  width = Math.max(1, rect.width);
+  height = Math.max(1, rect.height);
+  canvas.width = Math.ceil(width * window.devicePixelRatio);
+  canvas.height = Math.ceil(height * window.devicePixelRatio);
+  fit();
+}).observe(canvas);
+select(null);
+</script>
+</body>
+</html>

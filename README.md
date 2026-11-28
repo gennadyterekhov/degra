@@ -43,6 +43,16 @@ go run ./cmd reverse < examples/output/imports-php.json > importers.json
 
 ## Визуализация всего графа
 
+Для интерактивного просмотра создайте HTML из каталога `degra`:
+
+```sh
+go run ./cmd reverse --format html < examples/er/output/ast-php-er-imports.json > examples/er/output/importers.html
+```
+
+Откройте `importers.html` в браузере. Граф встроен в файл и работает без сети. Ищите файл по имени или части пути, либо выберите вершину на графе. Зелёным подсвечиваются прямые импортёры, оранжевым — файлы, достижимые только транзитивно. Колесо мыши меняет масштаб, перетаскивание перемещает граф, а кнопка «Весь граф» возвращает обзор.
+
+### Экспорт в SVG через Graphviz
+
 Установите [Graphviz](https://graphviz.org/download/). Из каталога `degra` выполните:
 
 ```sh

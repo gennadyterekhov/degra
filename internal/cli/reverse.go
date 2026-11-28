@@ -12,13 +12,13 @@ import (
 func runReverse(args []string, input io.Reader, output io.Writer) error {
 	flags := flag.NewFlagSet("degra reverse", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
-	format := flags.String("format", "json", "output format: json or dot")
+	format := flags.String("format", "json", "output format: json, dot or html")
 	noLabels := flags.Bool("no-labels", false, "hide file labels in DOT output")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
-	if flags.NArg() != 0 || (*format != "json" && *format != "dot") {
-		return errors.New("usage: degra reverse [--format json|dot] [--no-labels] < imports.json")
+	if flags.NArg() != 0 || (*format != "json" && *format != "dot" && *format != "html") {
+		return errors.New("usage: degra reverse [--format json|dot|html] [--no-labels] < imports.json")
 	}
 	reversed, err := graph.Reverse(input)
 	if err != nil {
@@ -26,6 +26,9 @@ func runReverse(args []string, input io.Reader, output io.Writer) error {
 	}
 	if *format == "dot" {
 		return reversed.WriteDOT(output, !*noLabels)
+	}
+	if *format == "html" {
+		return reversed.WriteHTML(output)
 	}
 	return json.NewEncoder(output).Encode(reversed)
 }
