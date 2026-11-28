@@ -74,7 +74,6 @@
       <button type="button" id="fit">Весь граф</button>
       <button type="button" id="zoom-in" aria-label="Увеличить">+</button>
       <button type="button" id="zoom-out" aria-label="Уменьшить">−</button>
-      <button type="button" id="clear">Снять выделение</button>
       <div class="legend"><span class="selected">Выбранный</span><span class="direct">Прямые</span><span class="transitive">Транзитивные</span></div>
     </div>
     <div id="viewport"><canvas aria-label="Узлы и связи графа"></canvas><div id="hover" hidden></div></div>
@@ -95,7 +94,6 @@ const hover = byID("hover");
 const ink = { selected: "#233e88", direct: "#087b69", transitive: "#ab4c11" };
 let selected = null;
 let direct = new Set();
-let reachable = new Set();
 let width = 1, height = 1, scale = 1, offsetX = 0, offsetY = 0;
 let matches = [];
 let drag = null;
@@ -132,8 +130,111 @@ function layout() {
   return { points, blocks, w: Math.max(1, maxX), h: Math.max(1, y + rowHeight) };
 }
 
-const scene = layout();
+const overview = { ...layout(), edges };
+let scene = overview;
 byID("summary").textContent = `${names.length} файлов · ${edges.length} связей`;
+
+function importerLayout(root) {
+  const columns = [[root]];
+  const depth = new Map([[root, 0]]);
+  const visibleEdges = [];
+  for (let level = 0; level < columns.length; level++) {
+    for (const name of columns[level]) {
+      for (const importer of graph[name]) {
+        visibleEdges.push([name, importer]);
+        if (depth.has(importer)) continue;
+        depth.set(importer, level + 1);
+        (columns[level + 1] ??= []).push(importer);
+      }
+    }
+  }
+
+  const incoming = new Map();
+  const outgoing = new Map();
+  for (const column of columns) {
+    column.sort();
+    for (const name of column) {
+      incoming.set(name, []);
+      outgoing.set(name, []);
+    }
+  }
+  for (const [from, to] of visibleEdges) {
+    if (depth.get(to) !== depth.get(from) + 1) continue;
+    incoming.get(to).push(from);
+    outgoing.get(from).push(to);
+  }
+  orderColumns(columns, incoming, outgoing);
+
+  const points = new Map();
+  const blocks = [];
+  const tallest = columns.reduce((height, column) => Math.max(height, column.length), 0);
+  const h = tallest * 36 + 40;
+  const w = columns.length * 224 - 16;
+  columns.forEach((column, level) => {
+    const x = level * 224;
+    const group = level === 0 ? "Выбранный файл" : level === 1 ? "Прямые импортёры" : `Шаг ${level}`;
+    blocks.push({ group, x, y: 0, w: 208, h });
+    column.forEach((name, i) => points.set(name, {
+      x: x + 104, y: 48 + (tallest - column.length) * 18 + i * 36,
+    }));
+  });
+  return { points, blocks, w, h, edges: visibleEdges, depth };
+}
+
+// Count inversions between adjacent columns. Edges with a shared endpoint
+// have equal positions or are processed together, so they do not count.
+function crossings(columns, outgoing) {
+  let count = 0;
+  for (let level = 0; level + 1 < columns.length; level++) {
+    const next = columns[level + 1];
+    const rank = new Map(next.map((name, i) => [name, i + 1]));
+    const tree = new Array(next.length + 1).fill(0);
+    let seen = 0;
+    for (const from of columns[level]) {
+      const positions = outgoing.get(from).map(to => rank.get(to));
+      for (const position of positions) {
+        let prefix = 0;
+        for (let i = position; i > 0; i -= i & -i) prefix += tree[i];
+        count += seen - prefix;
+      }
+      for (const position of positions) {
+        for (let i = position; i < tree.length; i += i & -i) tree[i]++;
+      }
+      seen += positions.length;
+    }
+  }
+  return count;
+}
+
+function orderColumns(columns, incoming, outgoing) {
+  let minimum = crossings(columns, outgoing);
+  let best = columns.map(column => column.slice());
+  for (let pass = 0; pass < 8 && minimum > 0; pass++) {
+    const forward = pass % 2 === 0;
+    const step = forward ? 1 : -1;
+    for (let level = forward ? 1 : columns.length - 2;
+      level >= 0 && level < columns.length; level += step) {
+      const neighborColumn = columns[level - step];
+      const rank = new Map(neighborColumn.map((name, i) => [name, (i + 0.5) / neighborColumn.length]));
+      const neighbors = forward ? incoming : outgoing;
+      const column = columns[level];
+      const score = new Map(column.map((name, i) => {
+        const adjacent = neighbors.get(name);
+        const mean = adjacent.length
+          ? adjacent.reduce((sum, other) => sum + rank.get(other), 0) / adjacent.length
+          : (i + 0.5) / column.length;
+        return [name, mean];
+      }));
+      column.sort((a, b) => score.get(a) - score.get(b));
+    }
+    const count = crossings(columns, outgoing);
+    if (count < minimum) {
+      minimum = count;
+      best = columns.map(column => column.slice());
+    }
+  }
+  columns.splice(0, columns.length, ...best);
+}
 
 function draw() {
   const ratio = canvas.width / width;
@@ -151,19 +252,21 @@ function draw() {
     }
   }
 
-  function edge(from, to, active) {
+  function edge(from, to, back) {
     const a = scene.points.get(from);
     const b = scene.points.get(to);
     ctx.beginPath();
     if (from === to) {
       ctx.arc(a.x + 5, a.y - 5, 6, 0, 2 * Math.PI);
     } else {
-      const angle = Math.atan2(b.y - a.y, b.x - a.x);
+      const controlX = Math.max(a.x, b.x) + 45;
+      const angle = back ? Math.atan2(b.y - a.y, b.x - controlX) : Math.atan2(b.y - a.y, b.x - a.x);
       const endX = b.x - Math.cos(angle) * 6;
       const endY = b.y - Math.sin(angle) * 6;
       ctx.moveTo(a.x, a.y);
-      ctx.lineTo(endX, endY);
-      if (active) {
+      if (back) ctx.quadraticCurveTo(controlX, a.y, endX, endY);
+      else ctx.lineTo(endX, endY);
+      if (selected !== null) {
         for (const side of [-1, 1]) {
           const direction = angle + side * 0.55;
           ctx.moveTo(endX, endY);
@@ -174,26 +277,34 @@ function draw() {
     ctx.stroke();
   }
 
-  ctx.lineWidth = 0.7;
-  ctx.strokeStyle = selected === null ? "#798ba25c" : "#798ba21f";
-  for (const [from, to] of edges) edge(from, to, false);
-  if (selected !== null) {
-    ctx.lineWidth = 1.4;
-    for (const [from, to] of edges) {
-      if (!reachable.has(from)) continue;
-      ctx.strokeStyle = from === selected ? ink.direct : ink.transitive;
-      edge(from, to, true);
-    }
+  ctx.lineWidth = selected === null ? 0.7 : 1.2;
+  for (const [from, to] of scene.edges) {
+    const back = scene.depth && scene.depth.get(to) <= scene.depth.get(from);
+    ctx.strokeStyle = selected === null ? "#798ba25c"
+      : back ? "#798ba2" : from === selected ? ink.direct : ink.transitive;
+    ctx.setLineDash(back ? [4, 3] : []);
+    edge(from, to, back);
   }
+  ctx.setLineDash([]);
 
   for (const [name, point] of scene.points) {
     ctx.fillStyle = name === selected ? ink.selected
       : direct.has(name) ? ink.direct
-      : reachable.has(name) ? ink.transitive
-      : selected === null ? "#647c9b" : "#aeb9ca";
+      : selected === null ? "#647c9b" : ink.transitive;
     ctx.beginPath();
     ctx.arc(point.x, point.y, name === selected ? 7 : 4.5, 0, 2 * Math.PI);
     ctx.fill();
+    if (selected !== null && scale >= 0.65) {
+      const basename = name.slice(name.lastIndexOf("/") + 1);
+      ctx.font = "11px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#edf2f8";
+      ctx.strokeText(basename, point.x, point.y - 9, 194);
+      ctx.fillStyle = "#19253a";
+      ctx.fillText(basename, point.x, point.y - 9, 194);
+      ctx.textAlign = "start";
+    }
   }
 }
 
@@ -212,37 +323,16 @@ function zoom(factor, x, y) {
   draw();
 }
 
-function select(name, reveal = false) {
+function select(name) {
   selected = name;
-  direct = new Set();
-  reachable = new Set();
-  if (name !== null) {
-    direct = new Set(graph[name].filter(file => file !== name));
-    reachable.add(name);
-    const pending = [name];
-    for (let i = 0; i < pending.length; i++) {
-      for (const importer of graph[pending[i]]) {
-        if (reachable.has(importer)) continue;
-        reachable.add(importer);
-        pending.push(importer);
-      }
-    }
-    if (reveal) {
-      const point = scene.points.get(name);
-      const x = offsetX + point.x * scale;
-      const y = offsetY + point.y * scale;
-      if (x < 12 || x > width - 12 || y < 12 || y > height - 12) {
-        offsetX = width / 2 - point.x * scale;
-        offsetY = height / 2 - point.y * scale;
-      }
-    }
-  }
+  scene = name === null ? overview : importerLayout(name);
+  direct = new Set(name === null ? [] : graph[name].filter(file => file !== name));
+  hover.hidden = true;
   byID("selection").textContent = name ?? "Файл не выбран";
   byID("importer-count").textContent = name === null
     ? "Выберите узел или результат поиска, чтобы увидеть его импортёров."
-    : `Прямые: ${direct.size} · только транзитивные: ${reachable.size - direct.size - 1}`;
-  byID("clear").disabled = name === null;
-  draw();
+    : `Прямые: ${direct.size} · только транзитивные: ${scene.points.size - direct.size - 1}`;
+  fit();
 }
 
 function updateSearch() {
@@ -253,7 +343,7 @@ function updateSearch() {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = name;
-    button.addEventListener("click", () => select(name, true));
+    button.addEventListener("click", () => select(name));
     return button;
   }));
 }
@@ -278,11 +368,10 @@ function cursor(event) {
 
 search.addEventListener("input", updateSearch);
 search.addEventListener("keydown", event => {
-  if (event.key === "Enter" && matches.length) select(matches[0], true);
+  if (event.key === "Enter" && matches.length) select(matches[0]);
 });
 document.addEventListener("keydown", event => { if (event.key === "Escape") select(null); });
-byID("clear").addEventListener("click", () => select(null));
-byID("fit").addEventListener("click", fit);
+byID("fit").addEventListener("click", () => select(null));
 byID("zoom-in").addEventListener("click", () => zoom(1.25, width / 2, height / 2));
 byID("zoom-out").addEventListener("click", () => zoom(0.8, width / 2, height / 2));
 canvas.addEventListener("wheel", event => {
